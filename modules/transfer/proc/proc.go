@@ -37,22 +37,26 @@ var (
 	HttpRecvCnt   = nproc.NewSCounterQps("HttpRecvCnt")
 	SocketRecvCnt = nproc.NewSCounterQps("SocketRecvCnt")
 
-	SendToJudgeCnt = nproc.NewSCounterQps("SendToJudgeCnt")
-	SendToTsdbCnt  = nproc.NewSCounterQps("SendToTsdbCnt")
-	SendToGraphCnt = nproc.NewSCounterQps("SendToGraphCnt")
+	SendToJudgeCnt       = nproc.NewSCounterQps("SendToJudgeCnt")
+	SendToStringJudgeCnt = nproc.NewSCounterQps("SendToStringJudgeCnt")
+	SendToTsdbCnt        = nproc.NewSCounterQps("SendToTsdbCnt")
+	SendToGraphCnt       = nproc.NewSCounterQps("SendToGraphCnt")
 
-	SendToJudgeDropCnt = nproc.NewSCounterQps("SendToJudgeDropCnt")
-	SendToTsdbDropCnt  = nproc.NewSCounterQps("SendToTsdbDropCnt")
-	SendToGraphDropCnt = nproc.NewSCounterQps("SendToGraphDropCnt")
+	SendToJudgeDropCnt       = nproc.NewSCounterQps("SendToJudgeDropCnt")
+	SendToStringJudgeDropCnt = nproc.NewSCounterQps("SendToStringJudgeDropCnt")
+	SendToTsdbDropCnt        = nproc.NewSCounterQps("SendToTsdbDropCnt")
+	SendToGraphDropCnt       = nproc.NewSCounterQps("SendToGraphDropCnt")
 
-	SendToJudgeFailCnt = nproc.NewSCounterQps("SendToJudgeFailCnt")
-	SendToTsdbFailCnt  = nproc.NewSCounterQps("SendToTsdbFailCnt")
-	SendToGraphFailCnt = nproc.NewSCounterQps("SendToGraphFailCnt")
+	SendToJudgeFailCnt       = nproc.NewSCounterQps("SendToJudgeFailCnt")
+	SendToStringJudgeFailCnt = nproc.NewSCounterQps("SendToStringJudgeFailCnt")
+	SendToTsdbFailCnt        = nproc.NewSCounterQps("SendToTsdbFailCnt")
+	SendToGraphFailCnt       = nproc.NewSCounterQps("SendToGraphFailCnt")
 
 	// 发送缓存大小
-	JudgeQueuesCnt = nproc.NewSCounterBase("JudgeSendCacheCnt")
-	TsdbQueuesCnt  = nproc.NewSCounterBase("TsdbSendCacheCnt")
-	GraphQueuesCnt = nproc.NewSCounterBase("GraphSendCacheCnt")
+	JudgeQueuesCnt       = nproc.NewSCounterBase("JudgeSendCacheCnt")
+	StringJudgeQueuesCnt = nproc.NewSCounterBase("JudgeSendCacheCnt")
+	TsdbQueuesCnt        = nproc.NewSCounterBase("TsdbSendCacheCnt")
+	GraphQueuesCnt       = nproc.NewSCounterBase("GraphSendCacheCnt")
 
 	// http请求次数
 	HistoryRequestCnt = nproc.NewSCounterQps("HistoryRequestCnt")
@@ -82,21 +86,25 @@ func GetAll() []interface{} {
 
 	// send cnt
 	ret = append(ret, SendToJudgeCnt.Get())
+	ret = append(ret, SendToStringJudgeCnt.Get())
 	ret = append(ret, SendToTsdbCnt.Get())
 	ret = append(ret, SendToGraphCnt.Get())
 
 	// drop cnt
 	ret = append(ret, SendToJudgeDropCnt.Get())
+	ret = append(ret, SendToStringJudgeDropCnt.Get())
 	ret = append(ret, SendToTsdbDropCnt.Get())
 	ret = append(ret, SendToGraphDropCnt.Get())
 
 	// send fail cnt
 	ret = append(ret, SendToJudgeFailCnt.Get())
+	ret = append(ret, SendToStringJudgeFailCnt.Get())
 	ret = append(ret, SendToTsdbFailCnt.Get())
 	ret = append(ret, SendToGraphFailCnt.Get())
 
 	// cache cnt
 	ret = append(ret, JudgeQueuesCnt.Get())
+	ret = append(ret, StringJudgeQueuesCnt.Get())
 	ret = append(ret, TsdbQueuesCnt.Get())
 	ret = append(ret, GraphQueuesCnt.Get())
 

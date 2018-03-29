@@ -1,0 +1,37 @@
+{
+  "debug": true,
+  "debugHost": "nil",
+  "remain": 11,
+  "http": {
+    "enabled": true,
+    "listen": "%%JUDGE_HTTP%%"
+  },
+  "rpc": {
+    "enabled": true,
+    "listen": "%%String_JUDGE_RPC%%"
+  },
+  "hbs": {
+    "servers": [
+      "%%HBS_RPC%%"
+    ],
+    "timeout": 300,
+    "interval": 60
+  },
+  /*要创建对应的数据库*/
+  "db": {
+    "dsn": "%%MYSQL%%/graph?loc=Local&parseTime=true",
+    "maxIdle": 4
+  },
+  "alarm": {
+    "enabled": true,
+    "minInterval": 300,
+    "queuePattern": "event:p%v",
+    "redis": {
+      "dsn": "%%REDIS%%",
+      "maxIdle": 5,
+      "connTimeout": 5000,
+      "readTimeout": 5000,
+      "writeTimeout": 5000
+    }
+  }
+}

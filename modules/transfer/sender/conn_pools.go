@@ -30,6 +30,13 @@ func initConnPools() {
 	}
 	JudgeConnPools = backend.CreateSafeRpcConnPools(cfg.Judge.MaxConns, cfg.Judge.MaxIdle,
 		cfg.Judge.ConnTimeout, cfg.Judge.CallTimeout, judgeInstances.ToSlice())
+	// stringJudge
+	stringJudgeInstances := nset.NewStringSet()
+	for _, instance := range cfg.StringJudge.Cluster {
+		stringJudgeInstances.Add(instance)
+	}
+	StringJudgeConnPools = backend.CreateSafeRpcConnPools(cfg.StringJudge.MaxConns, cfg.StringJudge.MaxIdle,
+		cfg.StringJudge.ConnTimeout, cfg.StringJudge.CallTimeout, stringJudgeInstances.ToSlice())
 
 	// tsdb
 	if cfg.Tsdb.Enabled {

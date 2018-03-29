@@ -12,17 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package sender
+package g
 
 import (
-	cutils "github.com/open-falcon/falcon-plus/common/utils"
-	"github.com/open-falcon/falcon-plus/modules/transfer/g"
-	"github.com/toolkits/consistent/rings"
+	"log"
+	"runtime"
 )
 
-func initNodeRings() {
-	cfg := g.Config()
-	StringJudgeNodeRing = rings.NewConsistentHashNodesRing(int32(cfg.StringJudge.Replicas), cutils.KeysOfMap(cfg.StringJudge.Cluster))
-	JudgeNodeRing = rings.NewConsistentHashNodesRing(int32(cfg.Judge.Replicas), cutils.KeysOfMap(cfg.Judge.Cluster))
-	GraphNodeRing = rings.NewConsistentHashNodesRing(int32(cfg.Graph.Replicas), cutils.KeysOfMap(cfg.Graph.Cluster))
+// change log
+// 2.0.1: bugfix HistoryData limit
+// 2.0.2: clean stale data
+const (
+	VERSION = "2.0.2"
+)
+
+func init() {
+	runtime.GOMAXPROCS(runtime.NumCPU())
+	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
 }

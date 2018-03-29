@@ -20,7 +20,7 @@ import (
 	cmodel "github.com/open-falcon/falcon-plus/common/model"
 	"github.com/open-falcon/falcon-plus/modules/transfer/g"
 	"github.com/open-falcon/falcon-plus/modules/transfer/proc"
-	rings "github.com/toolkits/consistent/rings"
+	"github.com/toolkits/consistent/rings"
 	nlist "github.com/toolkits/container/list"
 	"log"
 )
@@ -37,24 +37,27 @@ var (
 // 服务节点的一致性哈希环
 // pk -> node
 var (
-	JudgeNodeRing *rings.ConsistentHashNodeRing
-	GraphNodeRing *rings.ConsistentHashNodeRing
+	JudgeNodeRing       *rings.ConsistentHashNodeRing
+	StringJudgeNodeRing *rings.ConsistentHashNodeRing
+	GraphNodeRing       *rings.ConsistentHashNodeRing
 )
 
 // 发送缓存队列
 // node -> queue_of_data
 var (
-	TsdbQueue   *nlist.SafeListLimited
-	JudgeQueues = make(map[string]*nlist.SafeListLimited)
-	GraphQueues = make(map[string]*nlist.SafeListLimited)
+	TsdbQueue         *nlist.SafeListLimited
+	JudgeQueues       = make(map[string]*nlist.SafeListLimited)
+	StringJudgeQueues = make(map[string]*nlist.SafeListLimited)
+	GraphQueues       = make(map[string]*nlist.SafeListLimited)
 )
 
 // 连接池
 // node_address -> connection_pool
 var (
-	JudgeConnPools     *backend.SafeRpcConnPools
-	TsdbConnPoolHelper *backend.TsdbConnPoolHelper
-	GraphConnPools     *backend.SafeRpcConnPools
+	JudgeConnPools       *backend.SafeRpcConnPools
+	StringJudgeConnPools *backend.SafeRpcConnPools
+	TsdbConnPoolHelper   *backend.TsdbConnPoolHelper
+	GraphConnPools       *backend.SafeRpcConnPools
 )
 
 // 初始化数据发送服务, 在main函数中调用
@@ -94,7 +97,7 @@ func Push2JudgeSendQueue(items []*cmodel.MetaData) {
 		judgeItem := &cmodel.JudgeItem{
 			Endpoint:  item.Endpoint,
 			Metric:    item.Metric,
-			Value:     item.Value,
+			Value:     item.Value.(float64),
 			Timestamp: ts,
 			JudgeType: item.CounterType,
 			Tags:      item.Tags,
@@ -105,6 +108,41 @@ func Push2JudgeSendQueue(items []*cmodel.MetaData) {
 		// statistics
 		if !isSuccess {
 			proc.SendToJudgeDropCnt.Incr()
+		}
+	}
+}
+
+// 将数据 打入 某个StringJudge的发送缓存队列, 具体是哪一个StringJudge 由一致性哈希 决定
+func Push2StringJudgeSendQueue(items []*cmodel.MetaData) {
+	for _, item := range items {
+		pk := item.PK()
+		node, err := StringJudgeNodeRing.GetNode(pk)
+		if err != nil {
+			log.Println("E:", err)
+			continue
+		}
+
+		// align ts
+		step := int(item.Step)
+		if step < MinStep {
+			step = MinStep
+		}
+		ts := alignTs(item.Timestamp, int64(step))
+
+		StringJudgeItem := &cmodel.StringJudgeItem{
+			Endpoint:  item.Endpoint,
+			Metric:    item.Metric,
+			Value:     item.Value.(string),
+			Timestamp: ts,
+			JudgeType: item.CounterType,
+			Tags:      item.Tags,
+		}
+		Q := StringJudgeQueues[node]
+		isSuccess := Q.PushFront(StringJudgeItem)
+
+		// statistics
+		if !isSuccess {
+			proc.SendToStringJudgeDropCnt.Incr()
 		}
 	}
 }
@@ -123,7 +161,7 @@ func Push2GraphSendQueue(items []*cmodel.MetaData) {
 
 		// statistics. 为了效率,放到了这里,因此只有graph是enbale时才能trace
 		proc.RecvDataTrace.Trace(pk, item)
-		proc.RecvDataFilter.Filter(pk, item.Value, item)
+		proc.RecvDataFilter.Filter(pk, item.Value.(float64), item)
 
 		node, err := GraphNodeRing.GetNode(pk)
 		if err != nil {
@@ -155,7 +193,7 @@ func convert2GraphItem(d *cmodel.MetaData) (*cmodel.GraphItem, error) {
 	item.Metric = d.Metric
 	item.Tags = d.Tags
 	item.Timestamp = d.Timestamp
-	item.Value = d.Value
+	item.Value = d.Value.(float64)
 	item.Step = int(d.Step)
 	if item.Step < MinStep {
 		item.Step = MinStep
@@ -205,7 +243,7 @@ func convert2TsdbItem(d *cmodel.MetaData) *cmodel.TsdbItem {
 	t.Tags["endpoint"] = d.Endpoint
 	t.Metric = d.Metric
 	t.Timestamp = d.Timestamp
-	t.Value = d.Value
+	t.Value = d.Value.(float64)
 	return &t
 }
 

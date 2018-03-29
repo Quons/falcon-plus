@@ -64,7 +64,7 @@ type MetaData struct {
 	Endpoint    string            `json:"endpoint"`
 	Timestamp   int64             `json:"timestamp"`
 	Step        int64             `json:"step"`
-	Value       float64           `json:"value"`
+	Value       interface{}       `json:"value"`
 	CounterType string            `json:"counterType"`
 	Tags        map[string]string `json:"tags"`
 }

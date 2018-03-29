@@ -50,6 +50,19 @@ type JudgeConfig struct {
 	ClusterList map[string]*ClusterNode `json:"clusterList"`
 }
 
+//TODO  修改相应参数
+type StringJudgeConfig struct {
+	Enabled     bool                    `json:"enabled"`
+	Batch       int                     `json:"batch"`
+	ConnTimeout int                     `json:"connTimeout"`
+	CallTimeout int                     `json:"callTimeout"`
+	MaxConns    int                     `json:"maxConns"`
+	MaxIdle     int                     `json:"maxIdle"`
+	Replicas    int                     `json:"replicas"`
+	Cluster     map[string]string       `json:"cluster"`
+	ClusterList map[string]*ClusterNode `json:"clusterList"`
+}
+
 type GraphConfig struct {
 	Enabled     bool                    `json:"enabled"`
 	Batch       int                     `json:"batch"`
@@ -74,14 +87,15 @@ type TsdbConfig struct {
 }
 
 type GlobalConfig struct {
-	Debug   bool          `json:"debug"`
-	MinStep int           `json:"minStep"` //最小周期,单位sec
-	Http    *HttpConfig   `json:"http"`
-	Rpc     *RpcConfig    `json:"rpc"`
-	Socket  *SocketConfig `json:"socket"`
-	Judge   *JudgeConfig  `json:"judge"`
-	Graph   *GraphConfig  `json:"graph"`
-	Tsdb    *TsdbConfig   `json:"tsdb"`
+	Debug       bool               `json:"debug"`
+	MinStep     int                `json:"minStep"` //最小周期,单位sec
+	Http        *HttpConfig        `json:"http"`
+	Rpc         *RpcConfig         `json:"rpc"`
+	Socket      *SocketConfig      `json:"socket"`
+	Judge       *JudgeConfig       `json:"judge"`
+	StringJudge *StringJudgeConfig `json:"stringJudge"`
+	Graph       *GraphConfig       `json:"graph"`
+	Tsdb        *TsdbConfig        `json:"tsdb"`
 }
 
 var (
@@ -120,6 +134,7 @@ func ParseConfig(cfg string) {
 
 	// split cluster config
 	c.Judge.ClusterList = formatClusterItems(c.Judge.Cluster)
+	c.StringJudge.ClusterList = formatClusterItems(c.StringJudge.Cluster)
 	c.Graph.ClusterList = formatClusterItems(c.Graph.Cluster)
 
 	configLock.Lock()

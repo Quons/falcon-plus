@@ -35,6 +35,7 @@ func startSendTasks() {
 	cfg := g.Config()
 	// init semaphore
 	judgeConcurrent := cfg.Judge.MaxConns
+	StringJudgeConcurrent := cfg.StringJudge.MaxConns
 	graphConcurrent := cfg.Graph.MaxConns
 	tsdbConcurrent := cfg.Tsdb.MaxConns
 
@@ -48,6 +49,11 @@ func startSendTasks() {
 
 	if graphConcurrent < 1 {
 		graphConcurrent = 1
+	}
+
+	for node := range cfg.StringJudge.Cluster {
+		queue := StringJudgeQueues[node]
+		go forward2StringJudgeTask(queue, node, StringJudgeConcurrent)
 	}
 
 	// init send go-routines
@@ -115,6 +121,53 @@ func forward2JudgeTask(Q *list.SafeListLimited, node string, concurrent int) {
 	}
 }
 
+// String_Judge定时任务, 将 String_Judge发送缓存中的数据 通过rpc连接池 发送到String_Judge
+func forward2StringJudgeTask(Q *list.SafeListLimited, node string, concurrent int) {
+	batch := g.Config().StringJudge.Batch // 一次发送,最多batch条数据
+	addr := g.Config().StringJudge.Cluster[node]
+	sema := nsema.NewSemaphore(concurrent)
+
+	for {
+		items := Q.PopBackBy(batch)
+		count := len(items)
+		if count == 0 {
+			time.Sleep(DefaultSendTaskSleepInterval)
+			continue
+		}
+
+		stringJudgeItems := make([]*cmodel.StringJudgeItem, count)
+		for i := 0; i < count; i++ {
+			stringJudgeItems[i] = items[i].(*cmodel.StringJudgeItem)
+		}
+
+		//	同步Call + 有限并发 进行发送
+		sema.Acquire()
+		go func(addr string, stringJudgeItems []*cmodel.StringJudgeItem, count int) {
+			defer sema.Release()
+
+			resp := &cmodel.SimpleRpcResponse{}
+			var err error
+			sendOk := false
+			for i := 0; i < 3; i++ { //最多重试3次
+				err = StringJudgeConnPools.Call(addr, "StringJudge.Send", stringJudgeItems, resp)
+				if err == nil {
+					sendOk = true
+					break
+				}
+				time.Sleep(time.Millisecond * 10)
+			}
+
+			// statistics
+			if !sendOk {
+				log.Printf("send judge %s:%s fail: %v", node, addr, err)
+				proc.SendToStringJudgeFailCnt.IncrBy(int64(count))
+			} else {
+				proc.SendToStringJudgeCnt.IncrBy(int64(count))
+			}
+		}(addr, stringJudgeItems, count)
+	}
+}
+
 // Graph定时任务, 将 Graph发送缓存中的数据 通过rpc连接池 发送到Graph
 func forward2GraphTask(Q *list.SafeListLimited, node string, addr string, concurrent int) {
 	batch := g.Config().Graph.Batch // 一次发送,最多batch条数据
@@ -141,6 +194,7 @@ func forward2GraphTask(Q *list.SafeListLimited, node string, addr string, concur
 			var err error
 			sendOk := false
 			for i := 0; i < 3; i++ { //最多重试3次
+				//这里通过rpc发送
 				err = GraphConnPools.Call(addr, "Graph.Send", graphItems, resp)
 				if err == nil {
 					sendOk = true

@@ -55,8 +55,9 @@ func (t *Transfer) Update(args []*cmodel.MetricValue, reply *cmodel.TransferResp
 func RecvMetricValues(args []*cmodel.MetricValue, reply *cmodel.TransferResponse, from string) error {
 	start := time.Now()
 	reply.Invalid = 0
-
+	//item包括两种，value为float64类型的，和value为string的
 	items := []*cmodel.MetaData{}
+	stringItems := []*cmodel.MetaData{}
 	for _, v := range args {
 		if v == nil {
 			reply.Invalid += 1
@@ -118,7 +119,12 @@ func RecvMetricValues(args []*cmodel.MetricValue, reply *cmodel.TransferResponse
 		case string:
 			vv, err = strconv.ParseFloat(cv, 64)
 			if err != nil {
-				valid = false
+				//todo 这里进行改造，如果是字符串类型，就添加到string_judge
+				//转换不成功说明就是字符串文本信息
+				//valid = false
+				fv.Value = cv
+				stringItems = append(stringItems, fv)
+				continue
 			}
 		case float64:
 			vv = cv
@@ -138,7 +144,8 @@ func RecvMetricValues(args []*cmodel.MetricValue, reply *cmodel.TransferResponse
 	}
 
 	// statistics
-	cnt := int64(len(items))
+	cnt := int64(len(items)) + int64(len(stringItems))
+	//计数统计
 	proc.RecvCnt.IncrBy(cnt)
 	if from == "rpc" {
 		proc.RpcRecvCnt.IncrBy(cnt)
@@ -148,6 +155,11 @@ func RecvMetricValues(args []*cmodel.MetricValue, reply *cmodel.TransferResponse
 
 	cfg := g.Config()
 
+	//如果是字符串，直接就返回
+	if cfg.StringJudge.Enabled {
+		sender.Push2StringJudgeSendQueue(stringItems)
+	}
+
 	if cfg.Graph.Enabled {
 		sender.Push2GraphSendQueue(items)
 	}
@@ -155,7 +167,6 @@ func RecvMetricValues(args []*cmodel.MetricValue, reply *cmodel.TransferResponse
 	if cfg.Judge.Enabled {
 		sender.Push2JudgeSendQueue(items)
 	}
-
 	if cfg.Tsdb.Enabled {
 		sender.Push2TsdbSendQueue(items)
 	}

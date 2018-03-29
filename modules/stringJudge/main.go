@@ -12,17 +12,39 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package sender
+package main
 
 import (
-	cutils "github.com/open-falcon/falcon-plus/common/utils"
-	"github.com/open-falcon/falcon-plus/modules/transfer/g"
-	"github.com/toolkits/consistent/rings"
+	"flag"
+	"fmt"
+	"github.com/open-falcon/falcon-plus/modules/stringJudge/g"
+	"github.com/open-falcon/falcon-plus/modules/stringJudge/rpc"
+	"os"
 )
 
-func initNodeRings() {
-	cfg := g.Config()
-	StringJudgeNodeRing = rings.NewConsistentHashNodesRing(int32(cfg.StringJudge.Replicas), cutils.KeysOfMap(cfg.StringJudge.Cluster))
-	JudgeNodeRing = rings.NewConsistentHashNodesRing(int32(cfg.Judge.Replicas), cutils.KeysOfMap(cfg.Judge.Cluster))
-	GraphNodeRing = rings.NewConsistentHashNodesRing(int32(cfg.Graph.Replicas), cutils.KeysOfMap(cfg.Graph.Cluster))
+func main() {
+	cfg := flag.String("c", "cfg.json", "configuration file")
+	version := false //flag.Bool("v", false, "show version")
+	flag.Parse()
+
+	if version {
+		fmt.Println(g.VERSION)
+		os.Exit(0)
+	}
+
+	g.ParseConfig(*cfg)
+	// init db
+	g.InitDB()
+	//g.InitRedisConnPool()
+	//g.InitHbsClient()
+
+	//store.InitHistoryBigMap()
+
+	//go http.Start()
+	go rpc.Start()
+
+	//go cron.SyncStrategies()
+	//go cron.CleanStale()
+
+	select {}
 }
